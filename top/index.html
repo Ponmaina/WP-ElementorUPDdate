@@ -1,1 +1,733 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Elementor 安全な更新マニュアル</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Noto Sans JP', 'Hiragino Sans', sans-serif;
+      background: #f1f5f9;
+      color: #1e293b;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ===== ヘッダー ===== */
+    #app-header {
+      background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+      padding: 14px 20px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    #toggle-btn {
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: #fff;
+      border-radius: 6px;
+      padding: 5px 9px;
+      cursor: pointer;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    #header-sub { font-size: 10px; opacity: 0.7; letter-spacing: 1px; }
+    #header-title { font-size: 17px; font-weight: 700; }
+
+    /* ===== ボディ ===== */
+    #app-body {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    /* ===== サイドバー ===== */
+    #sidebar {
+      width: 220px;
+      flex-shrink: 0;
+      background: #fff;
+      border-right: 1px solid #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      transition: width 0.2s;
+    }
+    #sidebar.hidden { width: 0; overflow: hidden; }
+    #sidebar-inner { padding: 12px 8px; display: flex; flex-direction: column; gap: 2px; }
+
+    .nav-btn {
+      width: 100%;
+      text-align: left;
+      border: none;
+      border-left: 3px solid transparent;
+      cursor: pointer;
+      border-radius: 7px;
+      padding: 9px 10px;
+      background: transparent;
+      color: #475569;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .nav-btn:hover { background: #f8fafc; }
+    .nav-btn.active {
+      background: #eff6ff;
+      border-left: 3px solid #2563eb;
+      color: #1e40af;
+    }
+    .nav-btn .nav-label { font-size: 12px; font-weight: 500; line-height: 1.4; }
+    .nav-btn.active .nav-label { font-weight: 700; }
+    .nav-badge {
+      color: #fff;
+      border-radius: 10px;
+      padding: 1px 7px;
+      font-size: 10px;
+      font-weight: 600;
+      align-self: flex-start;
+    }
+
+    /* ===== メインコンテンツ ===== */
+    #main-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+    }
+    #main-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px 22px;
+      min-height: 300px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+
+    /* ===== コンテンツ共通 ===== */
+    .content-panel { display: none; }
+    .content-panel.active { display: block; }
+
+    .section-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #e2e8f0;
+    }
+    .slabel {
+      font-size: 11px;
+      font-weight: 700;
+      color: #6366f1;
+      letter-spacing: 0.5px;
+      margin-bottom: 5px;
+      margin-top: 13px;
+    }
+    .step-list { display: flex; flex-direction: column; gap: 5px; }
+    .step-box {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 9px 12px;
+      font-size: 13px;
+    }
+    .step-num {
+      background: #6366f1;
+      color: #fff;
+      border-radius: 50%;
+      min-width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .path-badge-row { display: flex; flex-wrap: wrap; gap: 3px; align-items: center; margin: 6px 0 8px; }
+    .path-badge { background: #ede9fe; color: #5b21b6; border-radius: 4px; padding: 2px 7px; font-size: 11px; font-weight: 600; }
+    .path-arrow { color: #94a3b8; font-size: 11px; }
+
+    .warn-box {
+      background: #fef9c3;
+      border: 1px solid #fbbf24;
+      border-radius: 8px;
+      padding: 9px 12px;
+      font-size: 13px;
+      margin-top: 10px;
+      line-height: 1.7;
+    }
+
+    /* スクリーンショット風 */
+    .ss-box {
+      background: #1e2a3b;
+      border-radius: 6px;
+      padding: 8px 12px;
+      margin: 6px 0 10px;
+      font-size: 13px;
+      color: #e2e8f0;
+      display: inline-block;
+    }
+    .ss-box .ss-title {
+      font-weight: 600;
+      margin-bottom: 6px;
+      border-bottom: 1px solid #334155;
+      padding-bottom: 5px;
+    }
+    .ss-box .ss-items { color: #94a3b8; font-size: 12px; line-height: 2; }
+    .ss-inline { display: inline-flex; align-items: center; gap: 7px; }
+
+    /* テーブル */
+    .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .data-table th { padding: 6px 10px; text-align: left; border: 1px solid #e2e8f0; background: #f1f5f9; white-space: nowrap; }
+    .data-table td { padding: 6px 10px; border: 1px solid #e2e8f0; }
+    .overflow-x { overflow-x: auto; }
+
+    /* アコーディオン（STEP3内） */
+    .cache-accordion {
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+      transition: border-color 0.2s;
+      margin-bottom: 8px;
+    }
+    .cache-accordion.open { border-color: var(--acc-color); }
+    .cache-acc-header {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 14px;
+      background: #fff;
+      border: none;
+      cursor: pointer;
+      text-align: left;
+    }
+    .cache-accordion.open .cache-acc-header { background: #f8fafc; }
+    .cache-acc-num {
+      color: #fff;
+      border-radius: 50%;
+      min-width: 26px;
+      height: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .cache-acc-text { flex: 1; }
+    .cache-acc-label { font-size: 13px; font-weight: 700; display: block; color: #1e293b; }
+    .cache-acc-sub { font-size: 11px; color: #64748b; margin-top: 2px; display: block; }
+    .cache-acc-arrow {
+      color: #94a3b8;
+      font-size: 18px;
+      flex-shrink: 0;
+      display: inline-block;
+      transition: transform 0.2s;
+    }
+    .cache-accordion.open .cache-acc-arrow { transform: rotate(90deg); }
+    .cache-acc-body { display: none; padding: 10px 14px 14px; background: #fafbff; }
+    .cache-accordion.open .cache-acc-body { display: block; }
+
+    /* QAアコーディオン */
+    .qa-wrap {
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+    .qa-header {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 9px 12px;
+      background: #f8fafc;
+      border: none;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      text-align: left;
+      color: #1e293b;
+      gap: 8px;
+    }
+    .qa-arrow { color: #94a3b8; flex-shrink: 0; display: inline-block; transition: transform 0.2s; }
+    .qa-wrap.open .qa-arrow { transform: rotate(90deg); }
+    .qa-body { display: none; padding: 10px 12px; font-size: 13px; color: #475569; line-height: 1.8; background: #fff; }
+    .qa-wrap.open .qa-body { display: block; }
+
+    /* 崩れた場合アコーディオン */
+    .fix-toggle-btn {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #fff5f5;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      padding: 10px 12px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 700;
+      color: #b91c1c;
+      gap: 8px;
+    }
+    .fix-arrow { display: inline-block; transition: transform 0.2s; }
+    .fix-body { display: none; margin-top: 8px; }
+    .fix-section.open .fix-body { display: flex; flex-direction: column; gap: 8px; }
+    .fix-section.open .fix-arrow { transform: rotate(90deg); }
+
+    .fix-card {
+      background: #fff5f5;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 13px;
+    }
+    .fix-card-title { font-weight: 700; margin-bottom: 6px; }
+
+    .restore-card { border-radius: 8px; overflow: hidden; border: 2px solid #f59e0b; }
+    .restore-header {
+      background: #f59e0b;
+      padding: 8px 12px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .restore-body {
+      background: #fffbeb;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    /* 全体の流れ */
+    .flow-item { display: flex; align-items: center; gap: 10px; }
+    .flow-dot {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .flow-circle {
+      color: #fff;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .flow-line { width: 2px; height: 16px; background: #e2e8f0; margin: 2px 0; }
+    .flow-card {
+      flex: 1;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 14px;
+    }
+    .flow-badge {
+      color: #fff;
+      border-radius: 20px;
+      padding: 2px 8px;
+      font-size: 10px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    /* ===== フッター ===== */
+    #app-footer {
+      background: #0f172a;
+      padding: 12px 20px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    #footer-left { display: flex; align-items: center; gap: 10px; }
+    #footer-text span { font-size: 12px; }
+    #footer-text .fw { font-weight: 700; color: #fff; }
+    #footer-text .fd { color: #94a3b8; }
+    #footer-text .hl { color: #fbbf24; font-weight: 700; }
+    #footer-link {
+      font-size: 11px;
+      color: #fff;
+      white-space: nowrap;
+      text-decoration: underline;
+      opacity: 0.85;
+    }
+    #footer-link:hover { opacity: 1; }
+
+    p { margin: 0 0 8px; font-size: 13px; }
+    code { background: #f1f5f9; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+    .mt-dashed { margin-top: 14px; border-top: 1px dashed #e2e8f0; padding-top: 12px; }
+  </style>
+</head>
+<body>
+
+<!-- ===== ヘッダー ===== -->
+<header id="app-header">
+  <button id="toggle-btn" title="サイドバー開閉" onclick="toggleSidebar()">☰</button>
+  <div>
+    <div id="header-sub">WORDPRESS MANUAL</div>
+    <div id="header-title">Elementor 安全な更新マニュアル</div>
+  </div>
+</header>
+
+<!-- ===== ボディ ===== -->
+<div id="app-body">
+
+  <!-- 左サイドバー -->
+  <nav id="sidebar">
+    <div id="sidebar-inner">
+      <button class="nav-btn active" data-target="overview" onclick="navigate(this)">
+        <span class="nav-label">📋 全体の流れ</span>
+      </button>
+      <button class="nav-btn" data-target="step1" onclick="navigate(this)">
+        <span class="nav-label">🛡️ STEP 1｜バックアップを取る</span>
+        <span class="nav-badge" style="background:#ef4444;">最重要</span>
+      </button>
+      <button class="nav-btn" data-target="step2" onclick="navigate(this)">
+        <span class="nav-label">🔄 STEP 2｜プラグインを更新する</span>
+        <span class="nav-badge" style="background:#f97316;">注意あり</span>
+      </button>
+      <button class="nav-btn" data-target="step3" onclick="navigate(this)">
+        <span class="nav-label">🧹 STEP 3｜キャッシュをクリアする</span>
+        <span class="nav-badge" style="background:#8b5cf6;">2か所必須</span>
+      </button>
+      <button class="nav-btn" data-target="step4" onclick="navigate(this)">
+        <span class="nav-label">🔍 STEP 4｜動作確認 ＋ 崩れた時の対処</span>
+        <span class="nav-badge" style="background:#0ea5e9;">確認必須</span>
+      </button>
+      <button class="nav-btn" data-target="version" onclick="navigate(this)">
+        <span class="nav-label">🔢 バージョン番号の見方</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- メインコンテンツ -->
+  <main id="main-area">
+    <div id="main-card">
+
+      <!-- 全体の流れ -->
+      <div id="panel-overview" class="content-panel active">
+        <div class="section-title">📋 全体の流れ</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div class="flow-item">
+            <div class="flow-dot">
+              <div class="flow-circle" style="background:#ef4444;">1</div>
+              <div class="flow-line"></div>
+            </div>
+            <div class="flow-card">
+              <span>🛡️ <strong>バックアップを取る</strong></span>
+              <span class="flow-badge" style="background:#ef4444;">最重要・最初に</span>
+            </div>
+          </div>
+          <div class="flow-item">
+            <div class="flow-dot">
+              <div class="flow-circle" style="background:#f97316;">2</div>
+              <div class="flow-line"></div>
+            </div>
+            <div class="flow-card">
+              <span>🔄 <strong>プラグインを更新する</strong></span>
+              <span class="flow-badge" style="background:#f97316;">注意あり</span>
+            </div>
+          </div>
+          <div class="flow-item">
+            <div class="flow-dot">
+              <div class="flow-circle" style="background:#8b5cf6;">3</div>
+              <div class="flow-line"></div>
+            </div>
+            <div class="flow-card">
+              <span>🧹 <strong>キャッシュをクリアする</strong></span>
+              <span class="flow-badge" style="background:#8b5cf6;">2か所・必須</span>
+            </div>
+          </div>
+          <div class="flow-item">
+            <div class="flow-dot">
+              <div class="flow-circle" style="background:#0ea5e9;">4</div>
+            </div>
+            <div class="flow-card">
+              <span>🔍 <strong>動作確認 ＋ 崩れた時の対処</strong></span>
+              <span class="flow-badge" style="background:#0ea5e9;">確認必須</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP1 -->
+      <div id="panel-step1" class="content-panel">
+        <div class="section-title">🛡️ STEP 1｜バックアップを取る</div>
+        <p>プラグイン「<strong>WP Vivid Backup</strong>（無料）」を使います。<br>管理画面の左サイドバーに表示されています。</p>
+        <div class="ss-box ss-inline">
+          <span>☁️</span>
+          <span style="font-weight:600;">WPvivid Backup</span>
+        </div>
+        <div class="slabel">▶ バックアップの手順</div>
+        <div class="step-list">
+          <div class="step-box"><span class="step-num">1</span><span>WordPress管理画面の左サイドバーから「WPvivid Backup」を押す</span></div>
+          <div class="step-box"><span class="step-num">2</span><span>プラグインのホーム画面が開いたら「バックアップ＆復元」タブを押す</span></div>
+          <div class="step-box"><span class="step-num">3</span><span>「バックアップ」ボタンを押す → 完了するとファイルが下の一覧に表示される</span></div>
+        </div>
+        <div class="slabel">▶ 復元したい場合</div>
+        <div class="step-list">
+          <div class="step-box"><span class="step-num">1</span><span>「バックアップ＆復元」タブを押す</span></div>
+          <div class="step-box"><span class="step-num">2</span><span>画面下のバックアップ一覧から該当ファイルを探す</span></div>
+          <div class="step-box"><span class="step-num">3</span><span>「復元」ボタンを押す → 元の状態に戻る</span></div>
+        </div>
+        <div class="warn-box">
+          <strong>⚠️ 「ローカル保存」について</strong><br>
+          「ローカルストレージ」＝ <strong>レンタルサーバー内への保存</strong>（あなたのパソコンではありません）。<br>
+          サーバー障害時にバックアップも失うリスクがあるため、<strong>Google Drive・Dropbox 等のリモートストレージへの自動転送</strong>の併用を推奨します。
+        </div>
+      </div>
+
+      <!-- STEP2 -->
+      <div id="panel-step2" class="content-panel">
+        <div class="section-title">🔄 STEP 2｜プラグインを更新する</div>
+        <div class="slabel">▶ 更新場所</div>
+        <div class="path-badge-row">
+          <span class="path-badge">左サイドバー</span><span class="path-arrow">▶</span>
+          <span class="path-badge">プラグイン</span><span class="path-arrow">▶</span>
+          <span class="path-badge">インストール済みプラグイン</span>
+        </div>
+        <p style="color:#475569;">各プラグインの「更新」リンクを押して更新します。</p>
+        <div class="slabel">▶ プラグイン別の注意点</div>
+        <div class="overflow-x">
+          <table class="data-table">
+            <thead><tr><th>プラグイン</th><th>注意点</th></tr></thead>
+            <tbody>
+              <tr style="background:#fff;"><td><strong>Elementor 本体</strong></td><td style="color:#475569;">比較的安定。躊躇なく更新OK</td></tr>
+              <tr style="background:#f8fafc;"><td><strong>Essential Addons 等の拡張プラグイン</strong></td><td style="color:#475569;">更新で崩れるケースあり。慎重に</td></tr>
+              <tr style="background:#fff;"><td><strong>キャッシュ系（WP Fastest Cache等）</strong></td><td style="color:#475569;">更新後のキャッシュ残りに注意</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- STEP3 -->
+      <div id="panel-step3" class="content-panel">
+        <div class="section-title">🧹 STEP 3｜キャッシュをクリアする</div>
+        <p>更新後は<strong>すぐテストせず</strong>、先に<strong>2か所のキャッシュを必ずクリア</strong>してください。</p>
+
+        <!-- アコーディオン① -->
+        <div class="cache-accordion" id="cache1" style="--acc-color:#0ea5e9;">
+          <button class="cache-acc-header" onclick="toggleCache('cache1')">
+            <span class="cache-acc-num" style="background:#0ea5e9;">①</span>
+            <span class="cache-acc-text">
+              <span class="cache-acc-label">WP Fastest Cache のキャッシュを削除</span>
+              <span class="cache-acc-sub">管理画面 上部バー から操作</span>
+            </span>
+            <span class="cache-acc-arrow">›</span>
+          </button>
+          <div class="cache-acc-body">
+            <p style="color:#475569;">WordPress管理画面<strong>上部バー</strong>（画面上部の黒いバー）に表示されています。</p>
+            <div class="ss-box">
+              <div class="ss-title">WP Fastest Cache</div>
+              <div class="ss-items">すべてのキャッシュを削除<br>キャッシュと縮小した CSS / JS をクリアする</div>
+            </div>
+            <div class="step-list" style="margin-top:4px;">
+              <div class="step-box"><span class="step-num">1</span><span>管理画面上部バーの「WP Fastest Cache」をクリック</span></div>
+              <div class="step-box"><span class="step-num">2</span><span>「すべてのキャッシュを削除」を押す</span></div>
+              <div class="step-box"><span class="step-num">3</span><span>「キャッシュと縮小した CSS / JS をクリアする」も押す</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- アコーディオン② -->
+        <div class="cache-accordion" id="cache2" style="--acc-color:#8b5cf6;">
+          <button class="cache-acc-header" onclick="toggleCache('cache2')">
+            <span class="cache-acc-num" style="background:#8b5cf6;">②</span>
+            <span class="cache-acc-text">
+              <span class="cache-acc-label">Elementor キャッシュを削除</span>
+              <span class="cache-acc-sub">左サイドバー → Elementorエディター → ツール → 一般タブ</span>
+            </span>
+            <span class="cache-acc-arrow">›</span>
+          </button>
+          <div class="cache-acc-body">
+            <div class="path-badge-row">
+              <span class="path-badge">左サイドバー Elementor にマウスを合わせる</span><span class="path-arrow">▶</span>
+              <span class="path-badge">Elementorエディター</span><span class="path-arrow">▶</span>
+              <span class="path-badge">ツール</span><span class="path-arrow">▶</span>
+              <span class="path-badge">一般タブ</span>
+            </div>
+            <div class="step-list" style="margin-top:4px;">
+              <div class="step-box"><span class="step-num">1</span><span>左サイドバーの「Elementor」にマウスを合わせるとサブメニューが出る</span></div>
+              <div class="step-box"><span class="step-num">2</span><span>「Elementorエディター」を押す</span></div>
+              <div class="step-box"><span class="step-num">3</span><span>「ツール」→「一般」タブを開く</span></div>
+              <div class="step-box"><span class="step-num">4</span><span>「Elementorキャッシュ」の「ファイルとデータを削除」を押す</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP4 -->
+      <div id="panel-step4" class="content-panel">
+        <div class="section-title">🔍 STEP 4｜動作確認 ＋ 崩れた時の対処</div>
+        <p><strong>プライベートウィンドウ（シークレットウィンドウ）を1つだけ</strong>開いて確認してください。</p>
+        <div class="overflow-x" style="margin-bottom:6px;">
+          <table class="data-table">
+            <thead><tr><th>確認方法</th><th style="text-align:center;">OK？</th></tr></thead>
+            <tbody>
+              <tr style="background:#f0fdf4;"><td>プライベート／シークレットウィンドウ（1つだけ）</td><td style="text-align:center;font-weight:600;">✅ OK</td></tr>
+              <tr style="background:#fef2f2;"><td>管理画面の「サイト表示」</td><td style="text-align:center;font-weight:600;">❌ NG</td></tr>
+              <tr style="background:#fef2f2;"><td>通常ブラウザ（ログイン中）</td><td style="text-align:center;font-weight:600;">❌ NG</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p style="font-size:12px;color:#64748b;">💡 Chrome：右上メニュー →「新しいシークレットウィンドウ」（<code>Ctrl+Shift+N</code> / <code>⌘+Shift+N</code>）</p>
+
+        <!-- QAアコーディオン -->
+        <div class="qa-wrap" id="qa1">
+          <button class="qa-header" onclick="toggleQA('qa1')">
+            <span>❓ なぜプライベートウィンドウで確認するの？</span>
+            <span class="qa-arrow">›</span>
+          </button>
+          <div class="qa-body">
+            通常のブラウザはログイン中のため、<strong>管理者用のキャッシュ</strong>が残っていることがあります。「サイト表示」も管理画面向けの表示のため、実際のユーザーが見る画面と異なる場合があります。<br><br>
+            プライベートウィンドウは<strong>未ログイン・キャッシュなし</strong>の状態で表示するため、訪問者が見ている画面に最も近い確認ができます。<br><br>
+            ⚠️ ウィンドウを複数開くとキャッシュが混在するため、<strong>必ず1つだけ</strong>開いてください。
+          </div>
+        </div>
+
+        <!-- 崩れた場合 -->
+        <div class="mt-dashed">
+          <div class="fix-section" id="fix1">
+            <button class="fix-toggle-btn" onclick="toggleFix('fix1')">
+              <span>🚨 サイトが崩れた場合の対処法</span>
+              <span class="fix-arrow">›</span>
+            </button>
+            <div class="fix-body">
+              <div class="fix-card">
+                <div class="fix-card-title">① キャッシュを再度すべてクリアする</div>
+                <p style="color:#475569;margin:0;">STEP 3 の手順をもう一度繰り返してください。</p>
+              </div>
+              <div class="fix-card">
+                <div class="fix-card-title">② Elementorキャッシュ機能を無効化する</div>
+                <div class="path-badge-row">
+                  <span class="path-badge">左サイドバー Elementor にマウスを合わせる</span><span class="path-arrow">▶</span>
+                  <span class="path-badge">設定</span><span class="path-arrow">▶</span>
+                  <span class="path-badge">パフォーマンスタブ</span>
+                </div>
+                <div class="step-list" style="margin-top:4px;">
+                  <div class="step-box"><span class="step-num">1</span><span>左サイドバーの「Elementor」にマウスを合わせる → 「設定」を押す</span></div>
+                  <div class="step-box"><span class="step-num">2</span><span>「パフォーマンス」タブを開く</span></div>
+                  <div class="step-box"><span class="step-num">3</span><span>「エレメンターキャッシュ」が有効になっていたら「無効化」に変更して保存</span></div>
+                </div>
+                <div class="warn-box">
+                  <strong>⚠️ この設定について</strong><br>
+                  Essential Addons・Happy Addons等の<strong>拡張プラグインを使っている場合は無効化を推奨</strong>。<br>
+                  Elementor本体のみ使用の場合はオンのままでOKです。
+                </div>
+              </div>
+              <div class="fix-card">
+                <div class="fix-card-title">③ 再度キャッシュをすべてクリアする</div>
+                <p style="color:#475569;margin:0;">②の設定変更後、STEP 3 の手順を再実行してください。</p>
+              </div>
+              <div class="restore-card">
+                <div class="restore-header"><span>④</span><span>それでも直らない場合 → WP Vivid Backupで復元</span></div>
+                <div class="restore-body">
+                  <div class="step-box"><span class="step-num">1</span><span>左サイドバーの「WPvivid Backup」を押す</span></div>
+                  <div class="step-box"><span class="step-num">2</span><span>「バックアップ＆復元」タブ → 下のバックアップ一覧を確認</span></div>
+                  <div class="step-box"><span class="step-num">3</span><span>更新前のバックアップの「復元」ボタンを押す</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- バージョン -->
+      <div id="panel-version" class="content-panel">
+        <div class="section-title">🔢 バージョン番号で更新タイミングを判断する</div>
+        <p style="color:#475569;">バージョン番号は <code>左.中.右</code> の3桁構成です。どの桁が変わったかで更新の安全度が変わります。</p>
+        <div class="overflow-x" style="margin-top:12px;">
+          <table class="data-table">
+            <thead>
+              <tr><th>変化の例</th><th>変化の種類</th><th>意味</th><th>対応</th></tr>
+            </thead>
+            <tbody>
+              <tr style="background:#f0fdf4;"><td><code>2.7.6 → 2.7.7</code></td><td style="white-space:nowrap;">右の数字が変わる</td><td>バグ修正・セキュリティ対応</td><td style="font-weight:600;white-space:nowrap;">✅ すぐ更新OK</td></tr>
+              <tr style="background:#fef9c3;"><td><code>2.7.6 → 2.8.0</code></td><td style="white-space:nowrap;">真ん中の数字が変わる</td><td>機能追加あり</td><td style="font-weight:600;white-space:nowrap;">⚠️ 2.8.2頃まで待つ</td></tr>
+              <tr style="background:#fff7ed;"><td><code>2.7.6 → 3.0.0</code></td><td style="white-space:nowrap;">左の数字が変わる</td><td>大きな変更あり</td><td style="font-weight:600;white-space:nowrap;">⚠️ 3.0.5頃まで待つ</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /#main-card -->
+  </main>
+</div><!-- /#app-body -->
+
+<!-- ===== フッター ===== -->
+<footer id="app-footer">
+  <div id="footer-left">
+    <span style="font-size:14px;">🔒</span>
+    <div id="footer-text">
+      <span class="fw">なぜ更新しないといけないの？　</span>
+      <span class="fd">ハッキングの原因の<span class="hl"> 8〜9割は未更新プラグイン</span>。ログイン強化だけでは不十分です。定期的に更新しましょう。</span>
+    </div>
+  </div>
+  <a id="footer-link" href="https://youtu.be/tH0WZPQCCAU?si=p3MajgphQuI86RF6" target="_blank" rel="noopener noreferrer">
+    🎥 もう崩れない！正しいElementorのアップデート方法
+  </a>
+</footer>
+
+<script>
+  // サイドバー開閉
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('hidden');
+  }
+
+  // ナビゲーション
+  function navigate(btn) {
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const target = btn.dataset.target;
+    document.querySelectorAll('.content-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('panel-' + target).classList.add('active');
+  }
+
+  // STEP3 キャッシュアコーディオン
+  function toggleCache(id) {
+    document.getElementById(id).classList.toggle('open');
+  }
+
+  // QAアコーディオン
+  function toggleQA(id) {
+    document.getElementById(id).classList.toggle('open');
+  }
+
+  // 崩れた場合アコーディオン
+  function toggleFix(id) {
+    document.getElementById(id).classList.toggle('open');
+  }
+</script>
+</body>
+</html>
 
